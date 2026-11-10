@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>Sumário executivo de risco</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f3f5f7;--card:#fff;--ink:#14212b;--mut:#5d6b76;--line:#dbe1e6;--a:#0f766e;--b:#c2410c;--c:#9fb3c1}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a21;--card:#16252e;--ink:#e6edf1;--mut:#97a7b2;--line:#27394380;--a:#2dd4bf;--b:#fb923c;--c:#4a6272}}
+:root[data-theme="dark"]{--bg:#0f1a21;--card:#16252e;--ink:#e6edf1;--mut:#97a7b2;--line:#27394380;--a:#2dd4bf;--b:#fb923c;--c:#4a6272}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "IBM Plex Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0}h2{font-size:15px;margin:0 0 10px}.sub{color:var(--mut);margin:2px 0 16px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between}.up{border:0;background:var(--a);color:var(--bg);padding:10px 16px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer}.st{color:var(--mut);margin:0 0 12px}.st.err{color:var(--b)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}.seg button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:6px;font:inherit;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}button:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.kpi,.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}.kpi small{color:var(--mut)}.kpi b{display:block;font-size:24px;font-weight:600;margin-top:2px}
+.kpi.main b{color:var(--a);font-size:34px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.cv{position:relative;height:250px}.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}th{color:var(--mut);font-weight:500}tfoot td{font-weight:600}
+.bar{display:inline-block;height:6px;border-radius:3px;background:var(--a);vertical-align:middle;margin-right:6px}.neg{color:var(--b)}
+</style></head><body><main>
+<div class="top"><div><h1>Sumário executivo de risco</h1>
+<p class="sub" id="sub"></p></div><div><button class="up" id="up">Carregar Excel atualizado</button><input type="file" id="fi" accept=".xlsx,.xlsm" hidden></div></div>
+<p class="st" id="st" role="status"></p>
+<div class="seg" id="seg" role="group" aria-label="Carteira"></div>
+<div class="kpis" id="kpis"></div>
+<div class="grid"><div class="card"><h2>Meta × realizado por faixa de atraso</h2><div class="cv"><canvas id="c1" role="img" aria-label="Meta e realizado por faixa"></canvas></div></div>
+<div class="card"><h2>% atingido da meta × % esperado por faixa</h2><div class="cv"><canvas id="c2" role="img" aria-label="Percentual atingido por faixa"></canvas></div></div></div>
+<div class="card" style="margin-bottom:14px"><h2>Detalhe por faixa</h2><div class="tw"><table id="tb"></table></div></div>
+<div class="grid"><div class="card"><h2>Pagamentos por dia</h2><div class="cv"><canvas id="c3" role="img" aria-label="Valor pago por dia"></canvas></div></div>
+<div class="card"><h2>Pagamentos por região e produto</h2><div class="tw"><table id="tr"></table></div><h2 style="margin-top:16px">Meta WO</h2><div id="wo"></div></div></div>
+</main>
+<script>
+let D=null,F=["16-30","31-60","61-90","91-120","121-180","181-360"],NM={prl:"Paraná leves",scl:"Santa Catarina leves",prp:"Paraná pesados",scp:"Santa Catarina pesados"},K=Object.keys(NM);
+const n0=v=>new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0}).format(v),m=v=>"R$ "+n0(v),p=v=>(v*100).toFixed(1).replace(".",",")+"%";
+const sum=a=>a.reduce((x,y)=>x+y,0);let sel="all",ch={};
+function data(){const ks=sel=="all"?K:[sel],g=f=>F.map((_,i)=>sum(ks.map(k=>D.blocks[k][f][i])));
+return{meta:g("meta"),real:g("real"),alvo:ks.length==1?D.blocks[ks[0]].alvo:null,peso:ks.length==1?D.blocks[ks[0]].peso:null}}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function chart(id,cfg){ch[id]&&ch[id].destroy();Chart.defaults.color=css("--mut");Chart.defaults.font.family="IBM Plex Sans, system-ui, sans-serif";ch[id]=new Chart(document.getElementById(id),cfg)}
+function render(){const d=data(),M=sum(d.meta),R=sum(d.real),{dt,du,dat,ref}=D.dias,proj=dt?R/dt*du:0,falta=(M-R)/dat;
+const sc=d.alvo?sum(d.real.map((r,i)=>r/d.meta[i]*d.peso[i])):null;
+document.getElementById("sub").textContent="Dados até "+ref+" · "+dt+" de "+du+" dias úteis decorridos · faltam "+dat;
+document.getElementById("seg").innerHTML=[["all","Todas"],...K.map(k=>[k,NM[k]])].map(([k,l])=>`<button aria-pressed="${k==sel}" data-k="${k}">${l}</button>`).join("");
+document.querySelectorAll("#seg button").forEach(b=>b.onclick=()=>{sel=b.dataset.k;render()});
+document.getElementById("kpis").innerHTML=`<div class="kpi main"><small>Atingido da meta</small><b>${p(R/M)}</b></div><div class="kpi"><small>Meta da carteira</small><b>${m(M)}</b></div><div class="kpi"><small>Realizado</small><b>${m(R)}</b></div><div class="kpi"><small>Projeção no ritmo atual</small><b>${m(proj)}</b><small>${p(proj/M)} da meta</small></div><div class="kpi"><small>Ideal por dia útil restante</small><b>${m(falta)}</b></div>${sc!=null?`<div class="kpi"><small>Performance ponderada</small><b>${p(sc)}</b></div>`:""}`;
+chart("c1",{type:"bar",data:{labels:F,datasets:[{label:"Meta",data:d.meta,backgroundColor:css("--c")},{label:"Realizado",data:d.real,backgroundColor:css("--a")}]},options:{maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>n0(v/1e6)+" mi"}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+": "+m(c.raw)}}}}});
+const at=d.real.map((r,i)=>r/d.meta[i]*100);
+chart("c2",{type:"bar",data:{labels:F,datasets:[{label:"% atingido",data:at,backgroundColor:css("--a")},...(d.alvo?[{label:"% esperado",data:d.alvo.map(x=>x*100),backgroundColor:css("--b")}]:[])]},options:{maintainAspectRatio:false,scales:{y:{ticks:{callback:v=>v+"%"}}},plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+": "+c.raw.toFixed(1)+"%"}}}}});
+let rows=F.map((f,i)=>`<tr><td>${f}</td><td>${m(d.meta[i])}</td><td>${m(d.real[i])}</td><td>${m(d.meta[i]-d.real[i])}</td><td>${m((d.meta[i]-d.real[i])/dat)}</td><td><span class="bar" style="width:${Math.min(at[i],100)*.6}px"></span>${p(d.real[i]/d.meta[i])}</td>${d.alvo?`<td>${p(d.alvo[i])}</td><td>${p(d.peso[i])}</td>`:""}</tr>`).join("");
+document.getElementById("tb").innerHTML=`<thead><tr><th>Faixa</th><th>Meta</th><th>Realizado</th><th>Diferença</th><th>Ideal/dia</th><th>Atingido</th>${d.alvo?"<th>% esperado</th><th>Peso</th>":""}</tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Total</td><td>${m(M)}</td><td>${m(R)}</td><td>${m(M-R)}</td><td>${m(falta)}</td><td>${p(R/M)}</td>${d.alvo?"<td></td><td></td>":""}</tr></tfoot>`}
+function extra(){chart("c3",{type:"bar",data:{labels:D.dia.map(x=>x.dia),datasets:[{label:"Valor pago",data:D.dia.map(x=>x.pago),backgroundColor:css("--a")},{label:"Receita",data:D.dia.map(x=>x.receita),backgroundColor:css("--b")}]},options:{maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>c.dataset.label+": "+m(c.raw)}}}}});
+document.getElementById("tr").innerHTML="<thead><tr><th>Região</th><th>Produto</th><th>Pagos</th><th>Valor pago</th><th>Receita</th></tr></thead><tbody>"+D.reg.map(r=>`<tr><td>${r.REGIAO}</td><td>${r.PRODUTO}</td><td>${r.n}</td><td>${m(r.pago)}</td><td>${m(r.receita)}</td></tr>`).join("")+"</tbody>";
+const w=D.wo,meta=w.carteira*w.pct;document.getElementById("wo").innerHTML=`<p>Carteira ${m(w.carteira)} · meta ${p(w.pct)} = <b>${m(meta)}</b><br>Atingido ${m(w.real)} (${p(w.real/w.carteira)} da carteira) · saldo <b class="neg">${m(meta-w.real)}</b></p>`;}
+function all(){render();extra()}
+document.getElementById("sub").textContent="Nenhum dado carregado";st0();function st0(){document.getElementById("st").textContent="Clique em “Carregar Excel atualizado” e escolha o arquivo do sumário executivo. A leitura é feita no seu navegador e o arquivo não é enviado a lugar nenhum."}
+const fi=document.getElementById("fi"),st=document.getElementById("st");
+document.getElementById("up").onclick=()=>fi.click();
+fi.onchange=async()=>{const f=fi.files[0];if(!f)return;st.className="st";st.textContent="Lendo "+f.name+"…";
+try{const wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true,sheets:["PERFORMANCE","SUMÁRIO","CONTROLLER","PAGAMENTOS"]});
+const need=["PERFORMANCE","SUMÁRIO","CONTROLLER","PAGAMENTOS"].filter(s=>!wb.Sheets[s]);if(need.length)throw new Error("Faltam as abas: "+need.join(", "));
+const num=(s,a)=>{const c=wb.Sheets[s][a];if(!c||typeof c.v!="number")throw new Error("Valor numérico ausente em "+s+"!"+a);return c.v};
+const B={};[["prl",8,3],["scl",18,10],["prp",28,17],["scp",38,24]].forEach(([k,r,pr])=>{const I=[0,1,2,3,4,5];B[k]={name:NM[k],meta:I.map(i=>num("SUMÁRIO","C"+(r+i))),real:I.map(i=>num("SUMÁRIO","D"+(r+i))),alvo:I.map(i=>num("PERFORMANCE","BDFHJL"[i]+pr)),peso:I.map(i=>num("PERFORMANCE","CEGIKM"[i]+pr))}});
+const h2=wb.Sheets["CONTROLLER"]["H2"],ref=h2&&h2.v instanceof Date?h2.v.toLocaleDateString("pt-BR",{timeZone:"UTC"}):"data não informada";
+const rows=XLSX.utils.sheet_to_json(wb.Sheets["PAGAMENTOS"]),dm={},rm={};
+rows.forEach(r=>{const d=r["DATA"],pago=+r["VALOR PAGO"]||0,rec=+r["RECEITA"]||0;if(d instanceof Date){const k=d.toISOString().slice(0,10);const o=dm[k]||(dm[k]={pago:0,receita:0,n:0});o.pago+=pago;o.receita+=rec;o.n++}
+const g=r["REGIAO"]+"|"+r["PRODUTO"],o=rm[g]||(rm[g]={REGIAO:r["REGIAO"],PRODUTO:r["PRODUTO"],pago:0,receita:0,n:0});o.pago+=pago;o.receita+=rec;o.n++});
+D={blocks:B,dias:{dt:num("CONTROLLER","H4"),du:num("CONTROLLER","H3"),dat:num("CONTROLLER","H5"),ref},
+dia:Object.keys(dm).sort().map(k=>({dia:k.slice(8)+"/"+k.slice(5,7),...dm[k]})),reg:Object.values(rm),
+wo:{carteira:num("PERFORMANCE","B30"),pct:num("PERFORMANCE","B31"),real:num("PERFORMANCE","B32")}};
+all();st.textContent="Atualizado com "+f.name+" · dados até "+ref}
+catch(e){st.className="st err";st.textContent="Não foi possível ler o arquivo: "+e.message}fi.value=""};
+matchMedia("(prefers-color-scheme: dark)").onchange=()=>D&&all();
+</script></body></html>
