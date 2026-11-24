@@ -144,7 +144,7 @@ const reg=r["REGIAO"]||"Sem região",prod=String(r["PRODUTO"]||"Sem produto").tr
 D={blocks:B,dias:{dt:num("CONTROLLER","H4"),du:num("CONTROLLER","H3"),dat:num("CONTROLLER","H5"),ref},
 dia:Object.keys(dm).sort().map(k=>({dia:k.slice(8)+"/"+k.slice(5,7),...dm[k]})),reg:Object.values(rm),rd:Object.values(rdm),
 wo:{carteira:num("PERFORMANCE","B30"),pct:num("PERFORMANCE","B31"),real:num("PERFORMANCE","B32")}};
-D.dk=[...new Set(D.rd.map(x=>x.k))].sort();D.hrs=[...new Set(D.rd.map(x=>x.h).filter(h=>h!=null&&isFinite(h)))].sort((x,y)=>x-y);D.hasHour=D.hrs.length>0;D.hasFx=!!fk;D.prods=[...new Set(D.rd.map(x=>x.PRODUTO))].sort();TF={a:"",b:"",h:"",p:"",f:""};buildFb1();all();st.textContent="Atualizado com "+f.name+" · dados até "+ref}
+D.dk=[...new Set(D.rd.map(x=>x.k))].sort();D.hrs=[...new Set(D.rd.map(x=>x.h).filter(h=>h!=null&&isFinite(h)))].sort((x,y)=>x-y);D.hasHour=D.hrs.length>0;D.hasFx=!!fk;D.prods=[...new Set(D.rd.map(x=>x.PRODUTO))].sort();TF={a:"",b:"",h:"",p:"",f:""};buildFb1();all();st.textContent="Atualizado com "+f.name+" · dados até "+ref;document.getElementById("up").hidden=true}
 catch(e){st.className="st err";st.textContent="Não foi possível ler o arquivo: "+e.message}fi.value=""};
 matchMedia("(prefers-color-scheme: dark)").onchange=()=>D&&all();
 </script><script>
@@ -243,7 +243,7 @@ const cc=[...new Set(A.map(x=>x.cart))];carts=[...ORD.filter(c=>cc.includes(c)),
 notes=[];if(dup)notes.push("Aba ACORDOS: "+n0(dup)+" de "+n0(raw.length)+" linhas eram idênticas (mesmo cliente, contrato, valor, data e hora) e foram contadas uma só vez");if(B&&B.dup)notes.push("Base RISCO: "+n0(B.dup)+" de "+n0(B.n)+" linhas repetidas foram ignoradas no cálculo de cobertura");
 {const t=new Date(),ts=Math.floor(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())/864e5)+25569;if(ref!=ts)notes.push("a data de referência do arquivo (célula B3) é "+dl(ref)+", diferente de hoje: os cartões \"hoje\" usam essa data")}
 if(unread>A.length*.05)notes.push("coluna de risco não lida em "+n0(unread)+" acordos"+(fill?"; usei o risco da base RISCO em "+n0(fill):"")+". Colunas encontradas: "+cols.join(", "));
-F={};est="ativos";E("pbapp").hidden=false;render();document.dispatchEvent(new Event("pbload"));st.textContent="Atualizado com "+f.name}
+F={};est="ativos";E("pbapp").hidden=false;render();document.dispatchEvent(new Event("pbload"));st.textContent="Atualizado com "+f.name;E("pbup").hidden=true}
 catch(e){st.className="st err";st.textContent="Não foi possível ler o arquivo: "+e.message}E("pbfi").value=""};
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(A.length)render()});
 const lg=document.querySelector("#t1 img");if(lg){E("pblogo").appendChild(lg.cloneNode());E("pglogo").appendChild(lg.cloneNode())}window.PBX={A:()=>A,B:()=>B,ref:()=>ref,render};
@@ -301,7 +301,7 @@ if(c.ct<0||c.pg<0||c.d<0)throw new Error("faltam as colunas CONTRATO, VALOR PAGO
 const L=[];rows.slice(1).forEach(r=>{if(r&&r[c.ct])L.push({ct:String(r[c.ct]).trim(),pago:num(r[c.pg]),rec:c.rc<0?0:num(r[c.rc]),d:ser(r[c.d]),fp:String(c.fp<0?"":r[c.fp]||"Sem forma").trim()||"Sem forma",fa:String(c.fa<0?"":r[c.fa]||"").trim()})});L.forEach(p=>{p.fx=fxn(p.fa);const m=p.ct.match(/-(\d+)/);p.ks=[...keys(p.ct),m&&m[1]].filter(Boolean)});
 if(!L.length)throw new Error("a aba Pagamentos está vazia");
 P=L;IDX=new Map();P.forEach(p=>p.ks.forEach(k=>(IDX.get(k)||IDX.set(k,[]).get(k)).push(p)));enr();tagA();
-E("pgsub").dataset.f=f.name;E("pgapp").hidden=false;render();window.PBX&&window.PBX.A().length&&window.PBX.render();st.textContent="Atualizado com "+f.name}
+E("pgsub").dataset.f=f.name;E("pgapp").hidden=false;render();window.PBX&&window.PBX.A().length&&window.PBX.render();st.textContent="Atualizado com "+f.name;E("pgup").hidden=true}
 catch(e){st.className="st err";st.textContent="Não foi possível ler o arquivo: "+e.message}E("pgfi").value=""};
 E("tb3").addEventListener("click",()=>cht&&cht.resize());
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(P.length)render()});
